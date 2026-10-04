@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Une lettre pour toi · Date me</title>
+<meta name="robots" content="noindex">
+<meta property="og:title" content="Tu as reçu une lettre">
+<meta property="og:description" content="Quelqu'un a une question à te poser. Ouvre l'enveloppe.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&family=Pinyon+Script&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%239b0e26'/%3E%3Cpath d='M16 16c2-3 6-1 4 3s-8 2-7-3 9-7 12-2' fill='none' stroke='%23f4c9d0' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23c8243f' stroke-width='1.4'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#9b0e26">
+<style>
+  .top { display: flex; justify-content: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top" id="top"></div>
+  <div id="app" class="stage"><div class="skel" aria-label="Chargement de la lettre"></div></div>
+  <footer class="site"><span>Envoyé avec <a href="/">Date me</a></span><a href="/">Écrire la mienne</a></footer>
+</div>
+<script src="/ui.js"></script>
+<script>
+(function () {
+  const { el, toast, cap, fmtDate, fmtTime, letter, envelope, ask, clearLoose, api } = BD;
+  document.getElementById("top").append(BD.logo());
+  const app = document.getElementById("app");
+  const id = location.pathname.split("/").filter(Boolean).pop();
+  const preview = new URLSearchParams(location.search).has("apercu");
+  let inv = null;
+  let celebrateId = null;
+  let opened = false;
+
+  const pendingIdeas = () => inv.ideas.filter((i) => i.status !== "oui");
+
+  function previewNote() {
+    return preview ? el("p", { class: "notice", text: "Aperçu : tu vois exactement ce que verra " + inv.to + ". Tes clics ne sont pas enregistrés." }) : null;
+  }
+
+  function doneView(idea) {
+    const reply = el("textarea", { id: "reply", placeholder: "J'ai hâte. Je m'occupe du dessert ?", maxlength: "400" });
+    if (idea.reply) reply.value = idea.reply;
+    const send = el("button", { class: "btn", type: "button", text: "Envoyer à " + inv.from });
+    send.addEventListener("click", async () => {
+      const v = reply.value.trim();
+      if (!v) { reply.focus(); return; }
+      if (preview) { toast("Aperçu : rien n'est enregistré"); return; }
+      send.disabled = true;
+      try { inv = await api("/api/answer", { method: "POST", body: { i: id, ideaId: idea.id, reply: v } }); toast("Message envoyé à " + inv.from); }
+      catch (e) { toast(e.message); }
+      send.disabled = false;
+    });
+    const hasNext = pendingIdeas().some((i) => i.id !== idea.id);
+    return el("article", { class: "letter reveal" },
+      BD.bouquet("corner tr"),
+      el("div", { class: "done" },
+        el("span", { class: "kicker", text: idea.title }),
+        el("h2", { text: "C'est un oui" }),
+        el("p", { text: cap(inv.from) + " va être aux anges. Un petit mot en retour ?" }),
+        el("label", { for: "reply", style: "width:100%" }, "Ton message", reply),
+        el("div", { class: "actions center" }, send,
+          hasNext ? el("button", { class: "btn ghost", type: "button", text: "Proposition suivante", onclick: () => { celebrateId = null; render(); } }) : null)
+      )
+    );
+  }
+
+  function acceptedList() {
+    const accepted = inv.ideas.filter((i) => i.status === "oui");
+    if (!accepted.length) return null;
+    return el("div", { class: "stage", style: "gap:12px" },
+      el("h3", { class: "section-title", text: "Déjà acceptés" }),
+      el("div", { class: "list" }, accepted.map((i) => el("div", { class: "item" },
+        el("div", { class: "info" }, el("span", { class: "name", text: i.title }),
+          el("span", { class: "meta", text: [fmtDate(i.date), fmtTime(i.time)].filter(Boolean).join(" · ") || "Date à fixer" })),
+        el("span", { class: "pill yes", text: "Oui" })
+      )))
+    );
+  }
+
+  function render() {
+    clearLoose();
+    app.replaceChildren();
+    const note = previewNote();
+    if (note) app.append(note);
+    const pending = pendingIdeas();
+
+    if (!opened && pending.length) {
+      app.append(envelope(inv, () => { opened = true; render(); }));
+      return;
+    }
+    const cel = celebrateId && inv.ideas.find((i) => i.id === celebrateId);
+    if (cel) {
+      app.append(doneView(cel));
+    } else if (pending.length) {
+      const idea = pending[0];
+      const total = inv.ideas.length;
+      app.append(el("div", { class: "reveal" }, letter(inv, idea, inv.ideas.indexOf(idea), total, ask(async () => {
+        celebrateId = idea.id;
+        if (preview) idea.status = "oui";
+        else {
+          try { inv = await api("/api/answer", { method: "POST", body: { i: id, ideaId: idea.id } }); }
+          catch (e) { toast(e.message); }
+        }
+        render();
+      }))));
+    } else {
+      app.append(el("div", { class: "empty" }, el("strong", { text: "Tout est accepté" }), "Tu as dit oui à tout. Il n'y a plus qu'à attendre le jour J."));
+    }
+    const list = cel ? null : acceptedList();
+    if (list) app.append(list);
+  }
+
+  (async function load() {
+    try {
+      inv = await api("/api/invite?i=" + encodeURIComponent(id));
+    } catch (e) {
+      app.replaceChildren(el("div", { class: "empty" }, el("strong", { text: e.status === 402 ? "Pas encore envoyée" : "Lettre introuvable" }), e.message));
+      return;
+    }
+    document.title = "Une lettre pour " + inv.to + " · Date me";
+    render();
+  })();
+})();
+</script>
+</body>
+</html>

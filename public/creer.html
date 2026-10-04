@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Écrire ma lettre · Date me</title>
+<meta name="description" content="Écris ta question et tes idées de dates. La personne invitée ne pourra répondre que oui.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&family=Pinyon+Script&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%239b0e26'/%3E%3Cpath d='M16 16c2-3 6-1 4 3s-8 2-7-3 9-7 12-2' fill='none' stroke='%23f4c9d0' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23c8243f' stroke-width='1.4'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#9b0e26">
+<style>
+  .preview { position: fixed; inset: 0; z-index: 40; background: var(--bg); overflow-y: auto; }
+  .preview .wrap { padding-block: calc(16px + env(safe-area-inset-top, 0px)) 48px; }
+  .checkout { position: sticky; bottom: 0; background: var(--bg); padding-block: 14px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; z-index: 5; }
+  .consent { flex-direction: row !important; align-items: flex-start; gap: 10px !important; font-weight: 400 !important; font-size: 13px !important; letter-spacing: 0 !important; text-transform: none !important; }
+  .consent input { width: 18px; height: 18px; flex: 0 0 18px; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand" id="brand"><span class="kicker">Ta lettre</span></div>
+  <header class="stage" style="gap:8px">
+    <h1>Écris ta <em>lettre</em></h1>
+    <p class="byline">Ta question s'affiche à l'ouverture de l'enveloppe, puis chaque idée de date est proposée. La personne invitée ne pourra cliquer que sur Oui.</p>
+  </header>
+  <div id="editor" class="stage"></div>
+  <div class="checkout">
+    <p class="notice" id="error" role="alert" hidden></p>
+    <label class="consent" for="cgv">
+      <input type="checkbox" id="cgv">
+      <span>J'accepte les <a href="/mentions.html" target="_blank" rel="noopener">conditions de vente</a> et je demande l'accès immédiat à ma lettre, ce qui met fin à mon droit de rétractation.</span>
+    </label>
+    <div class="actions">
+      <button class="btn big" type="button" id="go">Envoyer ma lettre</button>
+      <button class="btn ghost" type="button" id="see">Voir l'aperçu</button>
+    </div>
+    <p class="hint" style="text-align:left" id="price-line"></p>
+  </div>
+  <footer class="site"><a href="/">Accueil</a><a href="/mentions.html">Mentions légales et CGV</a></footer>
+</div>
+
+<div class="preview" id="preview" hidden>
+  <div class="wrap">
+    <div class="actions" style="justify-content:space-between">
+      <span class="kicker">Aperçu</span>
+      <button class="btn ghost" type="button" id="close">Revenir à ma lettre</button>
+    </div>
+    <div id="preview-body" class="stage"></div>
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script src="/ui.js"></script>
+<script src="/editor.js"></script>
+<script>
+(function () {
+  const { el, api, storage, rememberInvitation, letter, envelope, ask, clearLoose, toast } = BD;
+  const cfg = window.BD_CONFIG || {};
+  document.getElementById("brand").prepend(BD.logo());
+  const draft = storage.get("dateme:draft", null);
+  const state = draft && Array.isArray(draft.ideas) ? draft : { from: "", to: "", question: "", ideas: [] };
+  let saveTimer;
+  BD.editor(document.getElementById("editor"), state, {
+    onChange() { clearTimeout(saveTimer); saveTimer = setTimeout(() => storage.set("dateme:draft", state), 400); },
+  });
+
+  document.getElementById("go").textContent = "Envoyer ma lettre · " + (cfg.price || "");
+  document.getElementById("price-line").textContent = "Paiement unique et sécurisé. Tu reçois ensuite le lien à envoyer et ton espace pour suivre les réponses.";
+
+  const errorEl = document.getElementById("error");
+  function showError(msg) { errorEl.textContent = msg; errorEl.hidden = !msg; }
+  const filled = () => state.ideas.filter((i) => (i.title || "").trim());
+  const view = () => ({ from: state.from || "toi", to: state.to || "ta moitié", question: state.question || "Veux-tu un date avec moi ?" });
+
+  // Aperçu : l'enveloppe puis la lettre, comme la verra la personne invitée.
+  const preview = document.getElementById("preview");
+  const body = document.getElementById("preview-body");
+  function openPreview() {
+    const ideas = filled();
+    if (!ideas.length) { showError("Donne au moins un titre à ton idée de date pour voir l'aperçu."); document.getElementById("i0-title")?.focus(); return; }
+    showError("");
+    const inv = view();
+    body.replaceChildren(envelope(inv, () => {
+      body.replaceChildren(el("div", { class: "reveal" }, letter(inv, ideas[0], 0, ideas.length, ask(() => { toast("C'est ce qu'il ou elle verra. Rien n'est enregistré."); }))));
+    }));
+    preview.hidden = false;
+    preview.scrollTop = 0;
+  }
+  function closePreview() { clearLoose(); preview.hidden = true; }
+  document.getElementById("see").addEventListener("click", openPreview);
+  document.getElementById("close").addEventListener("click", closePreview);
+
+  const go = document.getElementById("go");
+  go.addEventListener("click", async () => {
+    if (!filled().length) { showError("Ajoute au moins une idée de date avec un titre."); document.getElementById("i0-title")?.focus(); return; }
+    if (!document.getElementById("cgv").checked) { showError("Coche la case des conditions de vente pour continuer."); document.getElementById("cgv").focus(); return; }
+    showError("");
+    go.disabled = true;
+    try {
+      const res = await api("/api/create", { method: "POST", body: { from: state.from, to: state.to, question: state.question, ideas: filled() } });
+      rememberInvitation(res.id, res.token);
+      if (res.paid) { storage.remove("dateme:draft"); location.href = "/espace/" + res.id + "?nouveau=1#" + res.token; }
+      else location.href = res.payUrl;
+    } catch (e) {
+      showError(e.message);
+      go.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

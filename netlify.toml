@@ -1,0 +1,18 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Lien partenaire : /b/ABC123  →  page invitation
+[[redirects]]
+  from = "/b/*"
+  to = "/b.html"
+  status = 200
+
+# Espace privé : /espace/ABC123#cle  →  page de gestion
+[[redirects]]
+  from = "/espace/*"
+  to = "/espace.html"
+  status = 200

@@ -1,0 +1,9 @@
+{
+  "name": "date-me",
+  "private": true,
+  "type": "module",
+  "description": "Date me : des invitations de date où le bouton Non s'enfuit.",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.3"
+  }
+}

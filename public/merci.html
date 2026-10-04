@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Merci · Date me</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&family=Pinyon+Script&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%239b0e26'/%3E%3Cpath d='M16 16c2-3 6-1 4 3s-8 2-7-3 9-7 12-2' fill='none' stroke='%23f4c9d0' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23c8243f' stroke-width='1.4'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#9b0e26">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand" id="brand"></div>
+  <header>
+    <h1>Merci, ta lettre <em>s'envole</em></h1>
+    <p class="byline" id="status">On vérifie ton paiement, ça prend quelques secondes…</p>
+  </header>
+  <p class="notice" id="error" role="alert" hidden></p>
+  <div class="actions" id="retry" hidden><button class="btn" type="button" id="retry-btn">Réessayer</button></div>
+</div>
+<script src="/config.js"></script>
+<script src="/ui.js"></script>
+<script>
+(function () {
+  const { api, storage } = BD;
+  document.getElementById("brand").append(BD.logo());
+  const cfg = window.BD_CONFIG || {};
+  const sessionId = new URLSearchParams(location.search).get("session_id");
+  const statusEl = document.getElementById("status");
+  const errorEl = document.getElementById("error");
+  const retry = document.getElementById("retry");
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  async function run() {
+    errorEl.hidden = true; retry.hidden = true;
+    if (!sessionId) {
+      errorEl.textContent = "Ce lien ne contient pas de paiement. Si tu as payé, écris-nous à " + (cfg.contactEmail || "l'adresse de contact") + " avec ton reçu Stripe.";
+      errorEl.hidden = false;
+      statusEl.textContent = "";
+      return;
+    }
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        let res = await api("/api/confirm", { method: "POST", body: { session_id: sessionId } });
+        const mine = storage.get("dateme:mine", {});
+        let token = mine[res.id];
+        if (!token) {
+          res = await api("/api/confirm", { method: "POST", body: { session_id: sessionId, reissue: true } });
+          token = res.token;
+          BD.rememberInvitation(res.id, token);
+        }
+        storage.remove("dateme:draft");
+        statusEl.textContent = "Paiement confirmé. On t'emmène vers ton espace…";
+        location.replace("/espace/" + res.id + "?nouveau=1#" + token);
+        return;
+      } catch (e) {
+        if (e.status === 402 && attempt < 5) { await sleep(2500); continue; }
+        errorEl.textContent = e.message + " Si le problème continue, écris à " + (cfg.contactEmail || "l'adresse de contact") + " avec ton reçu.";
+        errorEl.hidden = false;
+        retry.hidden = false;
+        statusEl.textContent = "";
+        return;
+      }
+    }
+  }
+  document.getElementById("retry-btn").addEventListener("click", run);
+  run();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mon espace · Date me</title>
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&family=Pinyon+Script&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%239b0e26'/%3E%3Cpath d='M16 16c2-3 6-1 4 3s-8 2-7-3 9-7 12-2' fill='none' stroke='%23f4c9d0' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23c8243f' stroke-width='1.4'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#9b0e26">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand" id="brand"><span class="kicker">Ton espace</span></div>
+  <header>
+    <h1 id="h1">Ton invitation</h1>
+    <p class="byline" id="byline"></p>
+  </header>
+  <div id="app" class="stage"><div class="skel" aria-label="Chargement de ton espace"></div></div>
+  <footer class="site"><a href="/creer.html">Écrire une autre lettre</a><a href="/mentions.html">Mentions légales et CGV</a></footer>
+</div>
+<script src="/config.js"></script>
+<script src="/ui.js"></script>
+<script src="/editor.js"></script>
+<script>
+(function () {
+  const { el, api, copy, toast, fmtDate, fmtTime, storage, rememberInvitation, cap } = BD;
+  document.getElementById("brand").prepend(BD.logo());
+  const app = document.getElementById("app");
+  const id = location.pathname.split("/").filter(Boolean).pop();
+  const fromHash = decodeURIComponent(location.hash.slice(1));
+  const key = fromHash || storage.get("dateme:mine", {})[id] || "";
+  const isNew = new URLSearchParams(location.search).has("nouveau");
+  let inv = null;
+  let editState = null;
+  let dirty = false;
+
+  const shareUrl = () => location.origin + "/b/" + id;
+  const privateUrl = () => location.origin + "/espace/" + id + "#" + key;
+
+  function copyBox(inputId, value) {
+    const input = el("input", { id: inputId, readonly: true, value });
+    input.addEventListener("focus", () => input.select());
+    return el("div", { class: "copybox" }, input, el("button", { class: "btn", type: "button", text: "Copier", onclick: () => copy(value, input) }));
+  }
+
+  function answers() {
+    return el("div", { class: "list" }, inv.ideas.map((i, n) => el("div", { class: "item" },
+      el("div", { class: "info" },
+        el("span", { class: "name", text: i.title }),
+        el("span", { class: "meta", text: ["N° " + String(n + 1).padStart(3, "0"), fmtDate(i.date), fmtTime(i.time)].filter(Boolean).join(" · ") })),
+      el("span", { class: "pill" + (i.status === "oui" ? " yes" : ""), text: i.status === "oui" ? "A dit oui" : "En attente" }),
+      i.reply ? el("div", { class: "reply" }, el("b", { text: cap(inv.to) + " : " }), i.reply) : null
+    )));
+  }
+
+  function render() {
+    document.getElementById("h1").textContent = "Pour " + inv.to;
+    document.getElementById("byline").textContent = "« " + inv.question + " » · une lettre de " + inv.from;
+    const yes = inv.ideas.filter((i) => i.status === "oui").length;
+
+    editState = { from: inv.from, to: inv.to, question: inv.question, ideas: inv.ideas.map((i) => ({ ...i })) };
+    const editorRoot = el("div", { class: "stage" });
+    const save = el("button", { class: "btn", type: "button", text: "Enregistrer les modifications" });
+    save.addEventListener("click", async () => {
+      save.disabled = true;
+      try {
+        inv = await api("/api/manage?i=" + encodeURIComponent(id), { method: "PUT", key, body: editState });
+        toast("Modifications enregistrées");
+        render();
+      } catch (e) { toast(e.message); save.disabled = false; }
+    });
+
+    app.replaceChildren(
+      isNew ? el("p", { class: "notice ok", text: "Ta lettre est prête. Envoie le lien ci-dessous à " + inv.to + "." }) : null,
+      el("div", { class: "card" },
+        el("h3", { text: "Le lien à envoyer à " + inv.to }),
+        copyBox("share-link", shareUrl()),
+        el("p", { class: "hint", style: "text-align:left", text: "Colle-le dans un message WhatsApp, Instagram ou SMS. Il ouvrira une enveloppe scellée, sans compte ni appli." }),
+        el("div", { class: "actions" }, el("a", { class: "btn ghost", href: "/b/" + id + "?apercu=1", target: "_blank", rel: "noopener", text: "Voir comme " + inv.to }))
+      ),
+      el("div", { class: "actions", style: "justify-content:space-between" },
+        el("h3", { class: "section-title", text: "Réponses · " + yes + " oui sur " + inv.ideas.length }),
+        el("button", { class: "link", type: "button", text: "Actualiser", onclick: load })),
+      answers(),
+      el("h3", { class: "section-title", style: "margin-top:12px", text: "Modifier ma lettre" }),
+      editorRoot,
+      el("div", { class: "actions" }, save),
+      el("div", { class: "card" },
+        el("h3", { text: "Ton lien privé" }),
+        el("p", { class: "muted", style: "margin:0;font-size:14px", text: "Garde-le pour toi : c'est lui qui ouvre cet espace et permet de modifier ta lettre. Ne l'envoie pas à " + inv.to + "." }),
+        copyBox("private-link", privateUrl())
+      )
+    );
+    dirty = false;
+    BD.editor(editorRoot, editState, { onChange() { dirty = true; } });
+  }
+
+  async function load() {
+    if (!key) {
+      app.replaceChildren(el("div", { class: "empty" }, el("strong", { text: "Lien privé incomplet" }), "Ouvre le lien privé complet reçu après ton achat (il se termine par une longue suite de caractères après le #)."));
+      return;
+    }
+    try {
+      inv = await api("/api/manage?i=" + encodeURIComponent(id), { key });
+      rememberInvitation(id, key);
+      render();
+    } catch (e) {
+      app.replaceChildren(el("div", { class: "empty" }, el("strong", { text: "Impossible d'ouvrir cet espace" }), e.message));
+    }
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && inv && !dirty) load();
+  });
+  load();
+})();
+</script>
+</body>
+</html>

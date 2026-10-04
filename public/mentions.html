@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mentions légales et CGV · Date me</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&family=Pinyon+Script&display=swap">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%239b0e26'/%3E%3Cpath d='M16 16c2-3 6-1 4 3s-8 2-7-3 9-7 12-2' fill='none' stroke='%23f4c9d0' stroke-width='1.6' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23c8243f' stroke-width='1.4'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#9b0e26">
+<style>
+  .legal h2 { font-size: 20px; margin: 8px 0 0; }
+  .legal p, .legal li { color: var(--ink); max-width: 65ch; }
+  .todo { background: var(--warn-soft); color: var(--warn); padding: 0 4px; border-radius: 4px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap legal">
+  <div class="brand" id="brand"></div>
+  <h1>Mentions légales et conditions de vente</h1>
+  <!-- MODÈLE À COMPLÉTER ET À FAIRE VÉRIFIER : remplace chaque passage surligné avant d'ouvrir les ventes. -->
+
+  <h2>Éditeur du site</h2>
+  <p><span class="todo">[Prénom Nom]</span>, entrepreneur individuel (micro-entreprise)<br>
+  SIRET : <span class="todo">[numéro SIRET]</span><br>
+  Adresse : <span class="todo">[adresse de domiciliation]</span><br>
+  Contact : <span class="todo">[adresse e-mail]</span><br>
+  TVA non applicable, article 293 B du CGI.</p>
+
+  <h2>Hébergement</h2>
+  <p>Netlify, Inc., <span class="todo">[adresse postale à recopier depuis netlify.com]</span>, États-Unis.</p>
+
+  <h2>Le service</h2>
+  <p>Date me permet de créer une lettre en ligne contenant une question et des idées de dates, accessible par un lien à envoyer à la personne de son choix. La personne invitée peut accepter chaque idée et laisser un message.</p>
+
+  <h2>Prix et paiement</h2>
+  <p>Le prix est indiqué en euros, toutes taxes comprises, sur la page de création. Le paiement est unique et se fait par carte via Stripe. Date me n'a jamais accès à tes données bancaires.</p>
+
+  <h2>Livraison et droit de rétractation</h2>
+  <p>L'invitation est un contenu numérique fourni immédiatement après le paiement. En validant ta commande, tu demandes son exécution immédiate et tu reconnais perdre ton droit de rétractation, conformément à l'article L221-28 du Code de la consommation. En cas de problème technique empêchant l'accès à ton invitation, écris-nous : nous trouverons une solution ou te rembourserons.</p>
+
+  <h2>Contenu des invitations</h2>
+  <p>Tu es responsable du contenu que tu écris. Tout contenu illicite, injurieux ou portant atteinte à autrui est interdit et pourra être supprimé sans remboursement.</p>
+
+  <h2>Données personnelles</h2>
+  <ul>
+    <li>Données collectées : les prénoms ou surnoms, les idées de dates et commentaires que tu saisis, et les messages laissés par la personne invitée. Aucun compte n'est créé.</li>
+    <li>Paiement : géré par Stripe, qui traite tes données selon sa propre politique de confidentialité.</li>
+    <li>Finalité : afficher ton invitation et ses réponses. Aucune revente, aucune publicité.</li>
+    <li>Durée de conservation : <span class="todo">[par exemple 12 mois après la création]</span>.</li>
+    <li>Tes droits (accès, rectification, suppression) : écris à <span class="todo">[adresse e-mail]</span> en indiquant le lien de ton invitation.</li>
+    <li>Le site n'utilise pas de cookies publicitaires. Il garde seulement dans ton navigateur le brouillon en cours et la clé de ton espace.</li>
+  </ul>
+
+  <h2>Litiges</h2>
+  <p>Le droit français s'applique. En cas de litige, tu peux recourir gratuitement à un médiateur de la consommation : <span class="todo">[nom et site du médiateur]</span>.</p>
+
+  <footer class="site"><a href="/">Accueil</a><a href="/creer.html">Écrire ma lettre</a></footer>
+</div>
+<script src="/ui.js"></script>
+<script>document.getElementById("brand").append(BD.logo());</script>
+</body>
+</html>
